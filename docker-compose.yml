@@ -1,0 +1,91 @@
+
+
+version: '3'
+services:
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    networks:
+      - cloudquery
+    environment:
+     - GF_SERVER_ROOT_URL=http://grafana-cloudquery.julianograciano.eti.br
+     - GF_INSTALL_PLUGINS=grafana-clock-panel      
+    ports:
+     - '3001:3000'
+    volumes:
+      - grafana:/var/lib/grafana
+  cloudquery: 
+    image: cloudquery
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cloudquery
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      PG_CONNECTION_STRING: ${PG_CONNECTION_STRING}
+    volumes:
+      - cache:/cache
+    restart: unless-stopped
+    networks:
+      - cloudquery
+    command: 'sync /config.yml --cq-dir /cache/.cq'
+  postgres:
+    container_name: postgres_container
+    image: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      PGDATA: /data/postgres
+    ports:
+      - "${PG_PORT:-5433}:5432"
+    volumes:
+       - postgres:/data/postgres
+    networks:
+      - cloudquery
+    restart: unless-stopped
+  pgadmin:
+    container_name: pgadmin_container
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-pgadmin4@julianograciano.eti.br}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    volumes:
+       - pgadmin:/var/lib/pgadmin
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    networks:
+      - cloudquery
+    restart: unless-stopped
+
+networks:
+  cloudquery:
+    driver: bridge
+
+volumes:
+    postgres:
+      driver: local
+      driver_opts:
+        type: 'none'
+        o: 'bind'
+        device: '/mnt/docker/cloudquery/postgres'
+    pgadmin:
+      driver: local
+      driver_opts:
+        type: 'none'
+        o: 'bind'
+        device: '/mnt/docker/cloudquery/pgadmin'
+    grafana:
+      driver: local
+      driver_opts:
+        type: 'none'
+        o: 'bind'
+        device: '/mnt/docker/cloudquery/grafana'
+    cache:
+      driver: local
+      driver_opts:
+        type: 'none'
+        o: 'bind'
+        device: '/mnt/docker/cloudquery/cache'

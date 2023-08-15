@@ -1,0 +1,15 @@
+kind: source
+spec:
+  name: aws
+  path: cloudquery/aws
+  version: "v22.5.1"
+  tables: ["*"]
+  destinations: ["postgresql"]
+---
+kind: destination
+spec:
+  name: postgresql
+  path: cloudquery/postgresql
+  version: "v5.0.4"
+  spec:
+    connection_string: ${PG_CONNECTION_STRING}
